@@ -1,0 +1,205 @@
+<html>
+    <head>
+        <style>
+
+.app {
+  margin-left: auto;
+  margin-right: auto;
+
+  max-width: 600px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 1.5em;
+}
+
+input {
+  font-size: 1em;
+  max-width: 90px;
+}
+
+button {
+  padding: 10px;
+  font-size: 1em;
+}
+
+#max {
+  display: flex;
+  gap: 20px;
+  align-items: center;
+}
+
+#punkte_maximal {
+  max-width: 120px;
+}
+
+#result {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
+  /*grid-template-rows: 1fr 1fr;*/
+  grid-gap: 2px;
+  background-color: black;
+  border: 2px solid black;
+}
+
+#result {
+  text-align: center;
+}
+
+.grade, .points, .cutoff {
+  padding: 5px 0px;
+  background-color: white;
+}
+
+.grade:nth-child(2n), .points:nth-child(2n+1) {
+  background-color: #00ccff;
+}
+
+.hint {
+  color: grey;
+  padding: 5px;
+  font-size: 0.6em;
+}
+        </style>
+    </head>    
+    <body>
+        <div class="app">
+            <div id="max">
+                <input type="text" id="punkte_maximal">
+                <div>Punkte maximal</div>
+            </div>
+            <div id="mirrr">
+            <div id="result">
+            </div>
+            <div class="hint">
+                <ul>
+                <li>Punkte in Prozent zu ganzen Prozenten aufgerundet</li>
+                </ul>
+            </div>
+        </div>
+        <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+        <script>
+
+const cutoffs_percent = [
+  0.96, // 1
+  0.80, // 2
+  0.65, // 3
+  0.46, // 4
+  0.20 // 5
+]
+
+let punkte_maximal = 54;
+
+const $targetGrid = $("#result");
+
+function isANumber(input) {
+  return !isNaN(input) && input !== "";
+}
+
+function update() {
+  if (!isANumber(punkte_maximal)) {
+    console.warn("Could not update because punkte_maximal is not valid!");
+    render();
+    return;
+  }
+	let punkte_current = punkte_maximal;
+  let segments = [];
+  for (let cutoff of cutoffs_percent) {
+    let segment_max = punkte_current
+    let erreicht_percent;
+    let erreicht_percent_aufgerundet
+    do {
+      punkte_current--;
+      erreicht_percent = punkte_current / punkte_maximal;
+      erreicht_percent_aufgerundet = erreicht_percent + 0.005;
+      console.log("Cutoff: " + cutoff
+        + ",  Punkte: " + punkte_current
+        + ", in Prozent: " + erreicht_percent.toFixed(3));
+    }
+    while (erreicht_percent_aufgerundet >= cutoff);
+
+		const segment = {
+      max: segment_max,
+      min: punkte_current + 1
+    }
+    console.log("Push " + JSON.stringify(segment));
+    segments.push(segment);
+  }
+  render(segments);
+}
+
+function getNumberFromInput($input, previous, errorText) {
+  let current = $input.val();
+  if (current === "") {
+    return null;
+  }
+  current = current.replace(",", '.');
+  if (!isANumber(current)) {
+    showInputError($input, "Fehler bei 'Punkte maximal'");
+    $input.val(previous);
+    return;
+  } else {
+    return current; 
+  }
+}
+
+function showInputError($input, text) {
+  alert(text);
+}
+
+function render(segments) {
+  $targetGrid.find(".grade").remove();
+  $targetGrid.find(".points").remove();
+  renderGrades($targetGrid);
+  if (segments) {
+    renderSegments($targetGrid, segments);
+  }
+}
+
+function renderCutoffInputs($targetGrid) {
+  for (let cutoff of cutoffs_percent) {
+    $targetGrid.append("<div class='cutoff'><input type='text' value='"+cutoff+"'></div>");
+  }
+  let $cutoffInputs = $(".cutoff > input");
+  console.log($cutoffInputs);
+  $cutoffInputs.each(function(index) {
+    let $input = $(this);
+    $input.on("input", () => {
+      let cutoff_previous = cutoffs_percent[index];
+      let cutoff_current = getNumberFromInput($input, cutoff_previous, "Fehler bei 'Cutoff'");
+      if (cutoff_current !== null) {
+        cutoffs_percent[index] = cutoff_current;
+        update();
+      }
+    })
+  });
+}
+
+function renderGrades($targetGrid) {
+  for (var grade = 1; grade <= 5; grade++) {
+    $targetGrid.append("<div class='grade'>" + grade + "</div>");
+  }
+}
+
+function renderSegments($targetGrid, segments) {
+  for (let segment of segments) {
+    let text = segment.max + " - " + segment.min;
+    $targetGrid.append("<div class='points'>" + text + "</div>");
+  }
+}
+
+let $punkteMaximal = $("#punkte_maximal");
+$punkteMaximal.val(punkte_maximal);
+$punkteMaximal.on("input", () => {
+  punkte_maximal = getNumberFromInput($punkteMaximal, punkte_maximal, "Fehler bei 'Punkte maximal'");
+  if (punkte_maximal !== null) {
+    update();
+  }
+});
+
+renderCutoffInputs($targetGrid);
+update();
+
+        </script>
+    </body>
+</html>
